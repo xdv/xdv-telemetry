@@ -1,0 +1,14 @@
+﻿# XDV Telemetry Workspace Manifest
+
+[workspace]
+name = "xdv_telemetry"
+version = "0.1.0"
+description = "Unified deterministic telemetry schema and aggregation pipeline."
+
+[sector]
+name = "xdv_telemetry"
+path = "src"
+
+[target.x64-pc-none]
+linker = "ld"
+linker_flags = ["-nostdlib", "-static"]
