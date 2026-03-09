@@ -1,0 +1,186 @@
+// File: telemetry_contracts.ds - This file is part of XDV
+// Copyright (c) 2026 Dust LLC, and Contributors
+// Description:
+//   xdv-telemetry: XDV-070 constants and validation helpers.
+
+forge XdvTelemetryContracts {
+
+    const STATUS_OK: UInt32 = 0;
+    const STATUS_INVALID_DOMAIN: UInt32 = 1;
+    const STATUS_INVALID_CATEGORY: UInt32 = 2;
+    const STATUS_INVALID_SEVERITY: UInt32 = 3;
+    const STATUS_INVALID_TIMESTAMP: UInt32 = 4;
+    const STATUS_INVALID_TENANT: UInt32 = 5;
+    const STATUS_INVALID_CAPABILITY: UInt32 = 6;
+    const STATUS_ACCESS_DENIED: UInt32 = 7;
+    const STATUS_ISOLATION_VIOLATION: UInt32 = 8;
+    const STATUS_EXPOSURE_VIOLATION: UInt32 = 9;
+
+    const DOMAIN_K: UInt64 = 0;
+    const DOMAIN_Q: UInt64 = 1;
+    const DOMAIN_PHI: UInt64 = 2;
+
+    const CATEGORY_PERFORMANCE: UInt64 = 1;
+    const CATEGORY_RESOURCE: UInt64 = 2;
+    const CATEGORY_STABILITY: UInt64 = 3;
+    const CATEGORY_SECURITY: UInt64 = 4;
+    const CATEGORY_FAULT: UInt64 = 5;
+    const CATEGORY_SCHEDULING: UInt64 = 6;
+
+    const CAP_SCOPE_K: UInt64 = 1;
+    const CAP_SCOPE_Q: UInt64 = 2;
+    const CAP_SCOPE_PHI: UInt64 = 4;
+    const CAP_SCOPE_ALL: UInt64 = 7;
+
+    const TENANT_MIN: UInt64 = 1;
+    const TENANT_MAX: UInt64 = 4095;
+
+    const SEVERITY_MIN: UInt64 = 1;
+    const SEVERITY_MAX: UInt64 = 5;
+
+    const EXPOSURE_STRUCTURED: UInt64 = 0;
+    const EXPOSURE_RAW_STATE: UInt64 = 1;
+
+    proc K::is_domain_valid(domain: UInt64) {
+        if domain == DOMAIN_K {
+            return STATUS_OK;
+        } else {
+            if domain == DOMAIN_Q {
+                return STATUS_OK;
+            } else {
+                if domain == DOMAIN_PHI {
+                    return STATUS_OK;
+                } else {
+                    return STATUS_INVALID_DOMAIN;
+                }
+            }
+        }
+    }
+
+    proc K::is_category_valid(category: UInt64) {
+        if category == CATEGORY_PERFORMANCE {
+            return STATUS_OK;
+        } else {
+            if category == CATEGORY_RESOURCE {
+                return STATUS_OK;
+            } else {
+                if category == CATEGORY_STABILITY {
+                    return STATUS_OK;
+                } else {
+                    if category == CATEGORY_SECURITY {
+                        return STATUS_OK;
+                    } else {
+                        if category == CATEGORY_FAULT {
+                            return STATUS_OK;
+                        } else {
+                            if category == CATEGORY_SCHEDULING {
+                                return STATUS_OK;
+                            } else {
+                                return STATUS_INVALID_CATEGORY;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    proc K::is_severity_valid(severity: UInt64) {
+        if severity < SEVERITY_MIN {
+            return STATUS_INVALID_SEVERITY;
+        } else {
+            if severity > SEVERITY_MAX {
+                return STATUS_INVALID_SEVERITY;
+            } else {
+                return STATUS_OK;
+            }
+        }
+    }
+
+    proc K::is_tenant_valid(tenant_id: UInt64) {
+        if tenant_id < TENANT_MIN {
+            return STATUS_INVALID_TENANT;
+        } else {
+            if tenant_id > TENANT_MAX {
+                return STATUS_INVALID_TENANT;
+            } else {
+                return STATUS_OK;
+            }
+        }
+    }
+
+    proc K::is_capability_scope_valid(cap_scope: UInt64) {
+        if cap_scope == CAP_SCOPE_K {
+            return STATUS_OK;
+        } else {
+            if cap_scope == CAP_SCOPE_Q {
+                return STATUS_OK;
+            } else {
+                if cap_scope == CAP_SCOPE_PHI {
+                    return STATUS_OK;
+                } else {
+                    if cap_scope == CAP_SCOPE_ALL {
+                        return STATUS_OK;
+                    } else {
+                        return STATUS_INVALID_CAPABILITY;
+                    }
+                }
+            }
+        }
+    }
+
+    proc K::domain_allowed_by_capability(domain: UInt64, cap_scope: UInt64) {
+        let d = is_domain_valid(domain);
+        if d == STATUS_OK {
+            let c = is_capability_scope_valid(cap_scope);
+            if c == STATUS_OK {
+                if cap_scope == CAP_SCOPE_ALL {
+                    return STATUS_OK;
+                } else {
+                    if domain == DOMAIN_K {
+                        if cap_scope == CAP_SCOPE_K {
+                            return STATUS_OK;
+                        } else {
+                            return STATUS_ACCESS_DENIED;
+                        }
+                    } else {
+                        if domain == DOMAIN_Q {
+                            if cap_scope == CAP_SCOPE_Q {
+                                return STATUS_OK;
+                            } else {
+                                return STATUS_ACCESS_DENIED;
+                            }
+                        } else {
+                            if cap_scope == CAP_SCOPE_PHI {
+                                return STATUS_OK;
+                            } else {
+                                return STATUS_ACCESS_DENIED;
+                            }
+                        }
+                    }
+                }
+            } else {
+                return c;
+            }
+        } else {
+            return d;
+        }
+    }
+
+    proc K::validate_exposure_mode(domain: UInt64, exposure_mode: UInt64) {
+        let d = is_domain_valid(domain);
+        if d == STATUS_OK {
+            if domain == DOMAIN_K {
+                return STATUS_OK;
+            } else {
+                if exposure_mode == EXPOSURE_STRUCTURED {
+                    return STATUS_OK;
+                } else {
+                    return STATUS_EXPOSURE_VIOLATION;
+                }
+            }
+        } else {
+            return d;
+        }
+    }
+}

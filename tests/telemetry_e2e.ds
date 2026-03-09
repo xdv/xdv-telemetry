@@ -1,0 +1,10 @@
+// File: telemetry_e2e.ds - This file is part of XDV
+// Copyright (c) 2026 Dust LLC, and Contributors
+// Description:
+//   xdv-telemetry: aggregate test entrypoint for XDV-070 behavior checks.
+
+forge XdvTelemetryE2E {
+    proc K::run_all_tests() {
+        return XdvTelemetryTests::K::run_all_tests();
+    }
+}

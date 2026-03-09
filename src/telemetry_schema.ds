@@ -1,0 +1,133 @@
+// File: telemetry_schema.ds - This file is part of XDV
+// Copyright (c) 2026 Dust LLC, and Contributors
+// Description:
+//   xdv-telemetry: unified metric and fault schema for XDV-070.
+
+forge XdvTelemetrySchema {
+
+    const STATUS_OK: UInt32 = 0;
+
+    proc K::metric_record_token(metric_id: UInt64, domain: UInt64, source_id: UInt64, process_id: UInt64, resource_id: UInt64, value: UInt64, unit_id: UInt64, logical_timestamp: UInt64, severity: UInt64, signature: UInt64, exposure_mode: UInt64) {
+        if metric_id == 0 {
+            return 0;
+        } else {
+            let domain_valid = XdvTelemetryContracts::K::is_domain_valid(domain);
+            if domain_valid == STATUS_OK {
+                let severity_valid = XdvTelemetryContracts::K::is_severity_valid(severity);
+                if severity_valid == STATUS_OK {
+                    let exposure_valid = XdvTelemetryContracts::K::validate_exposure_mode(domain, exposure_mode);
+                    if exposure_valid == STATUS_OK {
+                        if source_id == 0 {
+                            return 0;
+                        } else {
+                            if process_id == 0 {
+                                return 0;
+                            } else {
+                                if resource_id == 0 {
+                                    return 0;
+                                } else {
+                                    if unit_id == 0 {
+                                        return 0;
+                                    } else {
+                                        if logical_timestamp == 0 {
+                                            return 0;
+                                        } else {
+                                            if signature == 0 {
+                                                return 0;
+                                            } else {
+                                                return (logical_timestamp * 1000000000) + (metric_id * 1000000) + (domain * 100000) + (source_id * 1000) + (severity * 10) + (value - ((value / 10) * 10));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        return 0;
+                    }
+                } else {
+                    return 0;
+                }
+            } else {
+                return 0;
+            }
+        }
+    }
+
+    proc K::metric_order_key(logical_timestamp: UInt64, node_id: UInt64, source_id: UInt64, metric_id: UInt64) {
+        if logical_timestamp == 0 {
+            return 0;
+        } else {
+            if node_id == 0 {
+                return 0;
+            } else {
+                if source_id == 0 {
+                    return 0;
+                } else {
+                    if metric_id == 0 {
+                        return 0;
+                    } else {
+                        return (logical_timestamp * 1000000000) + (node_id * 1000000) + (source_id * 1000) + metric_id;
+                    }
+                }
+            }
+        }
+    }
+
+    proc K::category_tag(category: UInt64, domain: UInt64) {
+        let c = XdvTelemetryContracts::K::is_category_valid(category);
+        if c == STATUS_OK {
+            let d = XdvTelemetryContracts::K::is_domain_valid(domain);
+            if d == STATUS_OK {
+                return (category * 10) + domain;
+            } else {
+                return 0;
+            }
+        } else {
+            return 0;
+        }
+    }
+
+    proc K::metric_chain_hash(previous_hash: UInt64, current_metric_token: UInt64) {
+        if current_metric_token == 0 {
+            return 0;
+        } else {
+            let mixed = (previous_hash * 97) + (current_metric_token * 193) + 4099;
+            return mixed - ((mixed / 1000000) * 1000000);
+        }
+    }
+
+    proc K::fault_event_token(fault_id: UInt64, domain: UInt64, severity: UInt64, resource_id: UInt64, description_code: UInt64, logical_timestamp: UInt64, signature: UInt64) {
+        if fault_id == 0 {
+            return 0;
+        } else {
+            let d = XdvTelemetryContracts::K::is_domain_valid(domain);
+            if d == STATUS_OK {
+                let s = XdvTelemetryContracts::K::is_severity_valid(severity);
+                if s == STATUS_OK {
+                    if resource_id == 0 {
+                        return 0;
+                    } else {
+                        if description_code == 0 {
+                            return 0;
+                        } else {
+                            if logical_timestamp == 0 {
+                                return 0;
+                            } else {
+                                if signature == 0 {
+                                    return 0;
+                                } else {
+                                    return (logical_timestamp * 1000000000) + (fault_id * 1000000) + (domain * 100000) + (severity * 1000) + (description_code - ((description_code / 1000) * 1000));
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    return 0;
+                }
+            } else {
+                return 0;
+            }
+        }
+    }
+}

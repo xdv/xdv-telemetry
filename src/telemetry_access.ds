@@ -1,0 +1,134 @@
+// File: telemetry_access.ds - This file is part of XDV
+// Copyright (c) 2026 Dust LLC, and Contributors
+// Description:
+//   xdv-telemetry: capability-scoped access control checks.
+
+forge XdvTelemetryAccess {
+
+    const STATUS_OK: UInt32 = 0;
+
+    proc K::capability_token(token_id: UInt64, tenant_id: UInt64, domain_scope: UInt64, capability_scope: UInt64, issued_l: UInt64, expires_l: UInt64, signature: UInt64) {
+        if token_id == 0 {
+            return 0;
+        } else {
+            let t = XdvTelemetryContracts::K::is_tenant_valid(tenant_id);
+            if t == STATUS_OK {
+                let d = XdvTelemetryContracts::K::is_domain_valid(domain_scope);
+                if d == STATUS_OK {
+                    let c = XdvTelemetryContracts::K::is_capability_scope_valid(capability_scope);
+                    if c == STATUS_OK {
+                        if issued_l == 0 {
+                            return 0;
+                        } else {
+                            if expires_l == 0 {
+                                return 0;
+                            } else {
+                                if expires_l < issued_l {
+                                    return 0;
+                                } else {
+                                    if signature == 0 {
+                                        return 0;
+                                    } else {
+                                        return (expires_l * 1000000000) + (tenant_id * 1000000) + (domain_scope * 10000) + (capability_scope * 100) + (token_id - ((token_id / 100) * 100));
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        return 0;
+                    }
+                } else {
+                    return 0;
+                }
+            } else {
+                return 0;
+            }
+        }
+    }
+
+    proc K::token_active(issued_l: UInt64, expires_l: UInt64, now_l: UInt64) {
+        if issued_l == 0 {
+            return XdvTelemetryContracts::K::STATUS_ACCESS_DENIED;
+        } else {
+            if expires_l == 0 {
+                return XdvTelemetryContracts::K::STATUS_ACCESS_DENIED;
+            } else {
+                if now_l < issued_l {
+                    return XdvTelemetryContracts::K::STATUS_ACCESS_DENIED;
+                } else {
+                    if now_l > expires_l {
+                        return XdvTelemetryContracts::K::STATUS_ACCESS_DENIED;
+                    } else {
+                        return STATUS_OK;
+                    }
+                }
+            }
+        }
+    }
+
+    proc K::authorize_metric_read(token_tenant: UInt64, token_domain_scope: UInt64, token_cap_scope: UInt64, issued_l: UInt64, expires_l: UInt64, now_l: UInt64, request_tenant: UInt64, metric_domain: UInt64, cross_tenant_grant: UInt64) {
+        let active = token_active(issued_l, expires_l, now_l);
+        if active == STATUS_OK {
+            let req_tenant_valid = XdvTelemetryContracts::K::is_tenant_valid(request_tenant);
+            if req_tenant_valid == STATUS_OK {
+                if token_tenant == request_tenant {
+                    let domain_access = XdvTelemetryContracts::K::domain_allowed_by_capability(metric_domain, token_cap_scope);
+                    if domain_access == STATUS_OK {
+                        if token_domain_scope == metric_domain {
+                            return STATUS_OK;
+                        } else {
+                            return XdvTelemetryContracts::K::STATUS_ACCESS_DENIED;
+                        }
+                    } else {
+                        return domain_access;
+                    }
+                } else {
+                    if cross_tenant_grant == 1 {
+                        let domain_access_x = XdvTelemetryContracts::K::domain_allowed_by_capability(metric_domain, token_cap_scope);
+                        if domain_access_x == STATUS_OK {
+                            if token_domain_scope == metric_domain {
+                                return STATUS_OK;
+                            } else {
+                                return XdvTelemetryContracts::K::STATUS_ACCESS_DENIED;
+                            }
+                        } else {
+                            return domain_access_x;
+                        }
+                    } else {
+                        return XdvTelemetryContracts::K::STATUS_ISOLATION_VIOLATION;
+                    }
+                }
+            } else {
+                return req_tenant_valid;
+            }
+        } else {
+            return active;
+        }
+    }
+
+    proc K::authorize_distributed_aggregation(token_tenant: UInt64, token_domain_scope: UInt64, token_cap_scope: UInt64, issued_l: UInt64, expires_l: UInt64, now_l: UInt64, cluster_tenant: UInt64, metric_domain: UInt64) {
+        return authorize_metric_read(token_tenant, token_domain_scope, token_cap_scope, issued_l, expires_l, now_l, cluster_tenant, metric_domain, 0);
+    }
+
+    proc K::access_decision_token(token_id: UInt64, request_tenant: UInt64, metric_domain: UInt64, decision_status: UInt32, logical_timestamp: UInt64) {
+        if token_id == 0 {
+            return 0;
+        } else {
+            let tenant_valid = XdvTelemetryContracts::K::is_tenant_valid(request_tenant);
+            if tenant_valid == STATUS_OK {
+                let domain_valid = XdvTelemetryContracts::K::is_domain_valid(metric_domain);
+                if domain_valid == STATUS_OK {
+                    if logical_timestamp == 0 {
+                        return 0;
+                    } else {
+                        return (logical_timestamp * 1000000000) + (token_id * 1000000) + (request_tenant * 1000) + (metric_domain * 10) + decision_status;
+                    }
+                } else {
+                    return 0;
+                }
+            } else {
+                return 0;
+            }
+        }
+    }
+}

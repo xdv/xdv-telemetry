@@ -1,2 +1,113 @@
-﻿# XDV Telemetry bootstrap surface
-# TODO: implement module entrypoint
+// File: main.ds - This file is part of XDV
+// Copyright (c) 2026 Dust LLC, and Contributors
+// Description:
+//   xdv-telemetry: top-level entrypoints for XDV-070.
+
+forge XdvTelemetryMain {
+
+    const STATUS_OK: UInt32 = 0;
+    const STATUS_BOOTSTRAP_FAILED: UInt32 = 1;
+
+    proc K::startup_contract_validation() {
+        let d = XdvTelemetryContracts::K::is_domain_valid(XdvTelemetryContracts::K::DOMAIN_K);
+        if d == STATUS_OK {
+            let c = XdvTelemetryContracts::K::is_category_valid(XdvTelemetryContracts::K::CATEGORY_PERFORMANCE);
+            if c == STATUS_OK {
+                let cap = XdvTelemetryContracts::K::is_capability_scope_valid(XdvTelemetryContracts::K::CAP_SCOPE_K);
+                if cap == STATUS_OK {
+                    return STATUS_OK;
+                } else {
+                    return STATUS_BOOTSTRAP_FAILED;
+                }
+            } else {
+                return STATUS_BOOTSTRAP_FAILED;
+            }
+        } else {
+            return STATUS_BOOTSTRAP_FAILED;
+        }
+    }
+
+    proc K::smoke_unified_schema() {
+        let metric = XdvTelemetrySchema::K::metric_record_token(
+            1,
+            XdvTelemetryContracts::K::DOMAIN_K,
+            10,
+            100,
+            900,
+            77,
+            1,
+            1000,
+            2,
+            123,
+            XdvTelemetryContracts::K::EXPOSURE_STRUCTURED
+        );
+
+        if metric == 0 {
+            return STATUS_BOOTSTRAP_FAILED;
+        } else {
+            let fault = XdvTelemetrySchema::K::fault_event_token(7, XdvTelemetryContracts::K::DOMAIN_K, 4, 900, 88, 1001, 555);
+            if fault == 0 {
+                return STATUS_BOOTSTRAP_FAILED;
+            } else {
+                return STATUS_OK;
+            }
+        }
+    }
+
+    proc K::smoke_deterministic_aggregation() {
+        let flush = XdvTelemetryAggregation::K::local_flush_decision(100, 111, 10);
+        if flush == XdvTelemetryAggregation::K::FLUSH_YES {
+            let merge = XdvTelemetryAggregation::K::distributed_merge_token(200, 1, 10, 1, 200, 2, 10, 1);
+            if merge == 0 {
+                return STATUS_BOOTSTRAP_FAILED;
+            } else {
+                return STATUS_OK;
+            }
+        } else {
+            return STATUS_BOOTSTRAP_FAILED;
+        }
+    }
+
+    proc K::smoke_access_control() {
+        let token = XdvTelemetryAccess::K::capability_token(33, 8, XdvTelemetryContracts::K::DOMAIN_Q, XdvTelemetryContracts::K::CAP_SCOPE_Q, 1000, 1100, 777);
+        if token == 0 {
+            return STATUS_BOOTSTRAP_FAILED;
+        } else {
+            let access_status = XdvTelemetryAccess::K::authorize_metric_read(8, XdvTelemetryContracts::K::DOMAIN_Q, XdvTelemetryContracts::K::CAP_SCOPE_Q, 1000, 1100, 1050, 8, XdvTelemetryContracts::K::DOMAIN_Q, 0);
+            if access_status == STATUS_OK {
+                return STATUS_OK;
+            } else {
+                return STATUS_BOOTSTRAP_FAILED;
+            }
+        }
+    }
+
+    proc K::run_self_tests() {
+        return XdvTelemetryTests::K::run_all_tests();
+    }
+
+    proc K::bootstrap() {
+        let s = startup_contract_validation();
+        if s == STATUS_OK {
+            let a = smoke_unified_schema();
+            if a == STATUS_OK {
+                let b = smoke_deterministic_aggregation();
+                if b == STATUS_OK {
+                    let c = smoke_access_control();
+                    if c == STATUS_OK {
+                        return STATUS_OK;
+                    } else {
+                        return STATUS_BOOTSTRAP_FAILED;
+                    }
+                } else {
+                    return STATUS_BOOTSTRAP_FAILED;
+                }
+            } else {
+                return STATUS_BOOTSTRAP_FAILED;
+            }
+        } else {
+            return STATUS_BOOTSTRAP_FAILED;
+        }
+    }
+}
+
